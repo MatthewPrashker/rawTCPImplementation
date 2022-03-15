@@ -97,6 +97,8 @@ class TCPSession:
                     logger.info(
                         f"Got a packet from the future. SEQ: {tcp_pkt.seq_num}, EXPECTED: {expected_seq_num}"
                     )
+                    # send another ACK for what we know about
+                    self.send_tcp(TCP_ACK)
                     continue
                 break
             except struct.error as e:
