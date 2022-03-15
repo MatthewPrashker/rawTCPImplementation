@@ -8,6 +8,9 @@ from tcp import TCP
 from http import HTTP
 
 
+# Takes in a packet as a byte string starting at the IP Header
+# and returns the associated IPv4 object
+# Returns NULL if the checksum of created packet does not match the original checksum
 def construct_IPobj_from_bytes(packet: bytes) -> IPv4:
     IPstructString = "!BBHHHBBHLL"
     IPHeader_unpacked = struct.unpack(IPstructString, packet)
