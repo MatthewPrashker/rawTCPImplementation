@@ -51,10 +51,13 @@ class TCP:
         # Dest IP
         result += struct.pack("!L", int(self.dest_ip))
 
-        # Protocol
-        result += struct.pack("!H", TCP_PROTOCOL)
+        # Zeros
+        result += struct.pack("!B", 0)
 
         # Protocol
+        result += struct.pack("!B", TCP_PROTOCOL)
+
+        # Length
         result += struct.pack("!H", self.length())
 
         return result
@@ -67,7 +70,8 @@ class TCP:
         )
 
     def construct_header(self) -> bytes:
-        return self.construct_header_with_checksum_val(self.calculate_checksum())
+        checksum = self.calculate_checksum()
+        return self.construct_header_with_checksum_val(checksum)
 
     def construct_header_with_checksum_val(self, checksum_val: int) -> bytes:
         result = b""
