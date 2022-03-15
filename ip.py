@@ -1,7 +1,6 @@
 import struct
 from checksum import gen_checksum
 from ipaddress import IPv4Address
-from tcp import TCP
 
 # IP HEADER CONSTANTS
 IP_VERSION = 4
