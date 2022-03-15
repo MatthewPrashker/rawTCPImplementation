@@ -50,7 +50,7 @@ class TCPSession:
         self.send_socket.bind((self.source_ip, self.source_port))
         self.send_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
-    def send_tcp(self, flags: int, payload: bytes):
+    def send_tcp(self, flags: int, payload: bytes = b""):
         tcp_pkt = TCP(
             IPv4Address(self.source_ip),
             IPv4Address(self.dest_ip),
@@ -69,30 +69,45 @@ class TCPSession:
         )
         self.send_socket.sendto(ip_pkt.construct_packet(), (self.dest_ip, 1))
         logger.debug("sent TCP packet")
+        self.source_seq_num += len(payload) + 1
 
-    def recv_tcp(self) -> TCP:
+    def recv_tcp(self, first_recv=False) -> TCP:
+        # TODO: potentially timeout for a retry
         ip_pkt = None
         tcp_pkt = None
         while 1:
             try:
                 rcvd_bytes = self.receive_socket.recv(65535)
                 ip_pkt = construct_IPobj_from_bytes(rcvd_bytes)
+                if int(ip_pkt.source_ip) != int(IPv4Address("204.44.192.60")):
+                    continue
+                logger.debug(
+                    f"Saw packet {IPv4Address(ip_pkt.source_ip)} -> {IPv4Address(ip_pkt.dest_ip)}"
+                )
                 tcp_pkt = construct_TCPobj_from_bytes(ip_pkt.payload)
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)}:{tcp_pkt.source_port} -> {IPv4Address(ip_pkt.dest_ip)}:{tcp_pkt.dest_port}"
                 )
-                self.send_tcp(TCP_SYN, b"")
-                if tcp_pkt.dest_port == self.source_port:
-                    break
+                if tcp_pkt.dest_port != self.source_port:
+                    continue
+                if first_recv:
+                    self.source_ack_num = tcp_pkt.seq_num
+                expected_seq_num = self.source_ack_num + len(tcp_pkt.payload)
+                if tcp_pkt.seq_num != expected_seq_num:
+                    logger.info(
+                        f"Got a packet from the future. SEQ: {tcp_pkt.seq_num}, EXPECTED: {expected_seq_num}"
+                    )
+                    continue
+                break
             except struct.error as e:
                 continue
             except Exception as e:
                 continue
-        logger.info("Got a packet destined for me")
-        print(rcvd_bytes.hex())
+        logger.debug("Got a packet destined for me!")
+        self.source_ack_num = tcp_pkt.seq_num + 1
         return tcp_pkt
 
     def do_handshake(self):
-        self.send_tcp(TCP_SYN, b"")
-        syn_ack = self.recv_tcp()
-        # self.send_tcp(TCP_ACK, b"")
+        self.send_tcp(TCP_SYN)
+        syn_ack = self.recv_tcp(True)
+        self.send_tcp(TCP_ACK)

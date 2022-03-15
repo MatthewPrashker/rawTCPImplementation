@@ -32,7 +32,7 @@ def construct_IPobj_from_bytes(packet: bytes) -> IPv4:
 # Returns NULL if the checksum of created packet does not match the original checksum
 def construct_TCPobj_from_bytes(packet: bytes) -> TCP:
     TCPstructString = "!HHLLHHHH"
-    TCPHeader_unpacked = struct.unpack(TCPstructString, packet)
+    TCPHeader_unpacked = struct.unpack(TCPstructString, packet[:20])
     source_port = TCPHeader_unpacked[0]
     dest_port = TCPHeader_unpacked[1]
     seq_num = TCPHeader_unpacked[2]
