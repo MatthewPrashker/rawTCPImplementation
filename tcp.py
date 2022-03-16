@@ -86,7 +86,10 @@ class TCP:
         result += struct.pack("!L", self.seq_num)
 
         # Ack Number
-        result += struct.pack("!L", self.ack_num)
+        ack_to_pack = self.ack_num
+        if self.flags & TCP_ACK == 0:
+            ack_to_pack = 0
+        result += struct.pack("!L", ack_to_pack)
 
         # Data Offset, Reserved, Flags
         data_offset = self.header_length() << 12

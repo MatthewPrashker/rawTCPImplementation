@@ -15,6 +15,7 @@ def main():
     dst_ip = gethostbyname(parsed_url.hostname)
     session = TCPSession(dst_ip, 80)
     session.do_handshake()
+    session.do_get_request(parsed_url.netloc, parsed_url.path)
 
 
 if __name__ == "__main__":

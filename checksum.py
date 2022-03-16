@@ -4,11 +4,16 @@ import unittest
 # Takes in a string of bytes and computes the cumulative checksum of these bytes
 def gen_checksum(data: bytes) -> int:
     cs = 0
-    for i in range(0, len(data), 2):
-        cs += (data[i] << 8) + data[i + 1]
+    index = 0
+    while index + 1 < len(data):
+        cs += data[index] << 8
+        cs += data[index + 1]
+        index += 2
+
     if len(data) % 2:
-        logger.debug("ODD!?")
         cs += data[-1]
+        logger.debug("ODD!?")
+
     cs = (cs & 0xFFFF) + (cs >> 16)
     cs = (~cs) & 0xFFFF
     # TODO: figure this out

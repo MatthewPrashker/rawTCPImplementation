@@ -5,7 +5,7 @@ import struct
 
 from ip import IPv4
 from tcp import TCP
-from http import HTTP
+from httppacket import HTTP
 
 
 # Takes in a packet as a byte string starting at the IP Header

@@ -5,6 +5,7 @@ from ipaddress import IPv4Address
 from reconstruct import construct_IPobj_from_bytes, construct_TCPobj_from_bytes
 from tcp import TCP, TCP_SYN, TCP_ACK
 from ip import IPv4
+from httppacket import HTTP
 
 
 def get_ephemeral_port() -> int:
@@ -69,7 +70,7 @@ class TCPSession:
         )
         self.send_socket.sendto(ip_pkt.construct_packet(), (self.dest_ip, 1))
         logger.debug("sent TCP packet")
-        self.source_seq_num += len(payload) + 1
+        self.source_seq_num += len(payload)
 
     def recv_tcp(self, first_recv=False) -> TCP:
         # TODO: potentially timeout for a retry
@@ -79,7 +80,7 @@ class TCPSession:
             try:
                 rcvd_bytes = self.receive_socket.recv(65535)
                 ip_pkt = construct_IPobj_from_bytes(rcvd_bytes)
-                if int(ip_pkt.source_ip) != int(IPv4Address("204.44.192.60")):
+                if int(ip_pkt.source_ip) != int(IPv4Address(self.dest_ip)):
                     continue
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)} -> {IPv4Address(ip_pkt.dest_ip)}"
@@ -106,10 +107,15 @@ class TCPSession:
             except Exception as e:
                 continue
         logger.debug("Got a packet destined for me!")
-        self.source_ack_num = tcp_pkt.seq_num + 1
+        self.source_ack_num = tcp_pkt.seq_num + len(tcp_pkt.payload) + 1
         return tcp_pkt
 
     def do_handshake(self):
         self.send_tcp(TCP_SYN)
         syn_ack = self.recv_tcp(True)
         self.send_tcp(TCP_ACK)
+
+    def do_get_request(self, netloc: str, path: str):
+        # Build get request
+        get_request = HTTP(netloc, path).construct_packet()
+        self.send_tcp(TCP_ACK, get_request)
