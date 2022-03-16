@@ -8,6 +8,8 @@ class HTTP:
     def __init__(self, netloc: str, path: str):
         self.netloc = netloc
         self.path = path
+        if path == "":
+            self.path = "/"
         self.headers: Dict[str, str] = {}
         self.headers["Host"] = self.netloc
         self.headers["User-Agent"] = USER_AGENT
@@ -17,7 +19,7 @@ class HTTP:
         return 0
 
     def construct_packet(self) -> bytes:
-        ret = " "
+        ret = ""
         ret += " "
         ret += self.method
         ret += " "
