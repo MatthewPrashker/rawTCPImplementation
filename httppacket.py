@@ -11,8 +11,11 @@ class HTTP:
         if path == "":
             self.path = "/"
         self.headers: Dict[str, str] = {}
-        self.headers["Host"] = self.netloc
         self.headers["User-Agent"] = USER_AGENT
+        self.headers["Accept"] = "*/*"
+        self.headers["Accept-Encoding"] = "identity"
+        self.headers["Host"] = self.netloc
+        self.headers["Connection"] = "Keep-Alive"
         self.method = "GET"
 
     def length(self) -> int:
@@ -20,7 +23,7 @@ class HTTP:
 
     def construct_packet(self) -> bytes:
         ret = ""
-        ret += " "
+        ret += ""
         ret += self.method
         ret += " "
         ret += self.path
