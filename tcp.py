@@ -87,7 +87,7 @@ class TCP:
 
         # Ack Number
         ack_to_pack = self.ack_num
-        if self.flags & TCP_ACK == 0:
+        if not self.flag_set(TCP_ACK):
             ack_to_pack = 0
         result += struct.pack("!L", ack_to_pack)
 
@@ -107,6 +107,9 @@ class TCP:
 
         # assert len(result) == self.header_length()*4
         return result
+
+    def flag_set(self, flag: int) -> bool:
+        return self.flags & flag != 0
 
     def header_length(self) -> int:
         options_len = len(self.options)

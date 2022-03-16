@@ -3,10 +3,10 @@ from logger import logger
 import socket
 from ipaddress import IPv4Address
 from reconstruct import construct_IPobj_from_bytes, construct_TCPobj_from_bytes
-from tcp import TCP, TCP_SYN, TCP_ACK
+from tcp import TCP, TCP_SYN, TCP_ACK, TCP_PSH, TCP_FIN
 from ip import IPv4
 from httppacket import HTTP
-
+from typing import List
 
 def get_ephemeral_port() -> int:
     # NOTE: this socket is only used to obtain an ephemeral port number
@@ -41,6 +41,8 @@ class TCPSession:
 
         self.setup_receiver()
         self.setup_sender()
+
+        self.pkts_received: List[TCP] = []
 
     # Bind the receive socket
     def setup_receiver(self) -> int:
@@ -93,29 +95,98 @@ class TCPSession:
                     continue
                 if first_recv:
                     self.source_ack_num = tcp_pkt.seq_num
-                expected_seq_num = self.source_ack_num + len(tcp_pkt.payload)
-                if tcp_pkt.seq_num != expected_seq_num:
-                    logger.info(
-                        f"Got a packet from the future. SEQ: {tcp_pkt.seq_num}, EXPECTED: {expected_seq_num}"
-                    )
-                    # send another ACK for what we know about
-                    self.send_tcp(TCP_ACK)
-                    continue
                 break
+            # Not an IP or TCP packet
             except struct.error as e:
                 continue
             except Exception as e:
                 continue
         logger.debug("Got a packet destined for me!")
-        self.source_ack_num = tcp_pkt.seq_num + len(tcp_pkt.payload) + 1
+        self.handle_recvd_packet(tcp_pkt)
         return tcp_pkt
+
+    def handle_recvd_packet(self, incoming_pkt: TCP):
+        # Ignore duplicate packets
+        for pkt_already_have in self.pkts_received:
+            if pkt_already_have.seq_num == incoming_pkt.seq_num:
+                return
+        self.pkts_received.append(incoming_pkt)
+        self.sort_pkts_received()
+        latest_packet_without_break = self.latest_packet_without_break()
+        self.source_ack_num = latest_packet_without_break.seq_num + len(latest_packet_without_break.payload) + 1
+        self.send_tcp(TCP_ACK)
+
+    # Call when at least one packet has been received
+    def latest_packet_without_break(self) -> TCP:
+        last_pkt = self.pkts_received[0]
+        for pkt in self.pkts_received[1:]:
+            exp_next_seq = last_pkt.seq_num + len(last_pkt.payload)
+            if pkt.seq_num == exp_next_seq:
+                last_pkt = pkt
+                continue
+            else:
+                break
+
+        return last_pkt
+
+    def sort_pkts_received(self):
+        self.pkts_received = sorted(self.pkts_received, key=lambda pkt: pkt.seq_num)
+
+    def build_payload_stream(self):
+        ret = b""
+        self.sort_pkts_received()
+        for pkt in self.pkts_received:
+            ret += pkt.payload
+        return ret
 
     def do_handshake(self):
         self.send_tcp(TCP_SYN)
+        self.source_seq_num += 1
         syn_ack = self.recv_tcp(True)
-        self.send_tcp(TCP_ACK)
+        # self.send_tcp(TCP_ACK)
+        # self.source_seq_num += 1
 
-    def do_get_request(self, netloc: str, path: str):
+    def do_get_request(self, netloc: str, path: str) -> bytes:
         # Build get request
         get_request = HTTP(netloc, path).construct_packet()
-        self.send_tcp(TCP_ACK, get_request)
+        self.send_tcp(TCP_ACK + TCP_PSH, get_request)
+        while True:
+            curr_pkt = self.recv_tcp()
+            if curr_pkt.flag_set(TCP_FIN):
+                break
+        return self.build_payload_stream()
+
+import unittest
+class TestACKS(unittest.TestCase):
+
+    def make_ex_tcp(seq: int) -> TCP:
+        return TCP(0, 0, 0, 0, seq, 0, 0, 0, b"a")
+
+    def test_sort(self):
+        example = TCPSession("1.1.1.1", 80)
+        example.pkts_received = [
+            TestACKS.make_ex_tcp(3),
+            TestACKS.make_ex_tcp(2),
+            TestACKS.make_ex_tcp(1),
+            TestACKS.make_ex_tcp(4),
+        ]
+        example.sort_pkts_received()
+        for i in range(0, 4):
+            self.assertEqual(example.pkts_received[i].seq_num, i + 1)
+
+    def test_acks(self):
+        example = TCPSession("1.1.1.1", 80)
+        example.pkts_received = [
+            TestACKS.make_ex_tcp(1),
+            TestACKS.make_ex_tcp(2),
+            TestACKS.make_ex_tcp(3),
+            TestACKS.make_ex_tcp(4),
+            TestACKS.make_ex_tcp(5),
+            TestACKS.make_ex_tcp(7),
+            TestACKS.make_ex_tcp(8),
+            TestACKS.make_ex_tcp(9),
+            TestACKS.make_ex_tcp(10),
+        ]
+        self.assertEqual(example.latest_packet_without_break().seq_num, 5)
+        example.handle_recvd_packet(TestACKS.make_ex_tcp(6))
+        self.assertEqual(example.latest_packet_without_break().seq_num, 10)
