@@ -30,6 +30,8 @@ class TCP:
         window_size: int,
         flags: int,
         payload: bytes,
+        offset: int = 5,
+        options: bytes = b""
     ):
         self.source_ip = source_ip
         self.source_port = source_port
@@ -40,7 +42,8 @@ class TCP:
         self.window_size = window_size
         self.flags = flags
         self.payload = payload
-        self.options = self.construct_options()
+        self.offset = offset
+        self.options = options
 
     def gen_ip_psuedo_header(self) -> bytes:
         result = b""
@@ -62,7 +65,7 @@ class TCP:
 
         return result
 
-    def calculate_checksum(self) -> bytes:
+    def calculate_checksum(self) -> int:
         ip_pseudo = self.gen_ip_psuedo_header()
         header_with_zero_checksum = self.construct_header_with_checksum_val(0)
         return gen_checksum(
@@ -92,7 +95,7 @@ class TCP:
         result += struct.pack("!L", ack_to_pack)
 
         # Data Offset, Reserved, Flags
-        data_offset = self.header_length() << 12
+        data_offset = self.offset << 12
         do_r_f = data_offset + self.flags
         result += struct.pack("!H", do_r_f)
 
@@ -104,6 +107,9 @@ class TCP:
 
         # Urgent pointer
         result += struct.pack("!H", 0)
+        
+        #if self.offset > 5:
+         #   result += struct.pack("!" + (self.offset - 5)*"L", self.options)
 
         # assert len(result) == self.header_length()*4
         return result
@@ -112,14 +118,10 @@ class TCP:
         return self.flags & flag != 0
 
     def header_length(self) -> int:
-        options_len = len(self.options)
-        return options_len + TCP_HEADER_LEN_WO_OPTIONS
+        return self.offset
 
     def length(self) -> int:
         return len(self.payload) + self.header_length()
-
-    def construct_options(self) -> bytes:
-        return b""
 
     def construct_packet(self) -> bytes:
         return self.construct_header() + self.payload

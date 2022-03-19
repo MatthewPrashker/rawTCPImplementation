@@ -6,7 +6,7 @@ import struct
 from ip import IPv4
 from tcp import TCP
 from httppacket import HTTP
-
+from logger import logger
 
 # Takes in a packet as a byte string starting at the IP Header
 # and returns the associated IPv4 object
@@ -14,16 +14,30 @@ from httppacket import HTTP
 def construct_IPobj_from_bytes(packet: bytes) -> IPv4:
     IPstructString = "!BBHHHBBHLL"
     IPHeader_unpacked = struct.unpack(IPstructString, packet[:20])
+    IHL = IPHeader_unpacked[0]&0xf
+    DSCP_ECN = IPHeader_unpacked[1]
+    packet_id = IPHeader_unpacked[3]
+    offset = IPHeader_unpacked[4]&((1 << 13) - 1)
+    flags = (IPHeader_unpacked[4] >> 13)&((1 << 3) - 1)
+    ttl = IPHeader_unpacked[5]
     source_ip = IPHeader_unpacked[8]
     dest_ip = IPHeader_unpacked[9]
-
-    header_length_words = max(5, IPHeader_unpacked[0] & (1 << 4 - 1))
-    payload = packet[4 * header_length_words :]
-
+    payload = packet[4 * IHL :]
     checksum = IPHeader_unpacked[7]
-    ret = IPv4(source_ip, dest_ip, payload)
-    # TODO:
-    # if ret.get_checksum() == checksum:
+    
+    options = b""
+    if IHL > 5:
+        options = packet[20:4*IHL]
+    
+    ret = IPv4(source_ip, dest_ip, payload, packet_id=packet_id, ttl=ttl, IHL=IHL, options=options, flags=flags, DSCP_ECN=DSCP_ECN)
+    assert(ret.length == IPHeader_unpacked[2])
+
+
+    if not ret.calculate_checksum() + 15 == checksum:
+        logger.debug("Our IP checksum: " + str(ret.calculate_checksum()) + " Their IP checksum: " + str(checksum))
+        logger.debug(IPHeader_unpacked[1])
+        #Checksum failed
+        exit(1)
     return ret
 
 
@@ -41,19 +55,27 @@ def construct_TCPobj_from_bytes(packet: bytes) -> TCP:
     offset_and_flags = TCPHeader_unpacked[4]
     offset = (offset_and_flags >> 12) & ((1 << 4) - 1)
     flags = offset_and_flags & ((1 << 9) - 1)
-
+    
     window_size = TCPHeader_unpacked[5]
+    checksum = TCPHeader_unpacked[6]
     payload = packet[4 * offset :]
-
+    options = b""
+    if offset > 5:
+        options = packet[20:4*offset]
+        logger.debug("saw packed with big offset " + str(offset) + " with options " + str(options))
     ret = TCP(
-        0, 0, source_port, dest_port, seq_num, ack_num, window_size, flags, payload
+        0, 0, source_port, dest_port, seq_num, ack_num, window_size, flags, payload, offset=offset, options=options
     )
-
+    logger.debug(str(ret.calculate_checksum()) + " " + str(checksum))
+    #if not check_sum == ret.calculate_checksum():
+    #    logger.debug("wrong TCP checksum")
+    #else:
+     #   logger.debug("right TCP checksum")
     # # TODO: Verify checksum
     # check_sum = TCPHeader_unpacked[6]
     # if check_sum == ret.get_checksum():
     #     return ret
-
+    logger.debug("Our TCP checksum " + str(ret.calculate_checksum()) + " Their TCP checksum: " + str(checksum))
     return ret
 
 

@@ -9,6 +9,7 @@ def gen_checksum(data: bytes) -> int:
 
     if len(data) % 2 == 1:
         logger.debug("ODD!?")
+        
         pkt += b"\0"
 
     while index + 1 < len(pkt):

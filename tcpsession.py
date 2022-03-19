@@ -73,6 +73,8 @@ class TCPSession:
         )
         self.send_socket.sendto(ip_pkt.construct_packet(), (self.dest_ip, 1))
         logger.debug("sent TCP packet")
+        logger.debug("Length of TCP packet " + str(len(ip_pkt.construct_packet())))
+        logger.debug(ip_pkt.length)
         self.source_seq_num += len(payload)
 
     def recv_tcp(self, first_recv=False) -> TCP:
@@ -83,6 +85,7 @@ class TCPSession:
             try:
                 rcvd_bytes = self.receive_socket.recv(65535)
                 ip_pkt = construct_IPobj_from_bytes(rcvd_bytes)
+                
                 if int(ip_pkt.source_ip) != int(IPv4Address(self.dest_ip)):
                     continue
                 logger.debug(
@@ -103,6 +106,7 @@ class TCPSession:
             except Exception as e:
                 continue
         logger.debug("Got a packet destined for me!")
+        logger.debug(str(ip_pkt.length))
         self.handle_recvd_packet(tcp_pkt, first_recv)
         return tcp_pkt
 
