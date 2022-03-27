@@ -53,8 +53,8 @@ def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
     ack_num = TCPHeader_unpacked[3]
 
     offset_and_flags = TCPHeader_unpacked[4]
-    offset = (offset_and_flags >> 12) & ((1 << 4) - 1)
-    flags = offset_and_flags & ((1 << 9) - 1)
+    offset = (offset_and_flags >> 12)
+    flags = offset_and_flags - (offset << 12)
     
     window_size = TCPHeader_unpacked[5]
     checksum = TCPHeader_unpacked[6]
@@ -71,7 +71,9 @@ def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
     #else:
      #   logger.debug("right TCP checksum")
     # # TODO: Verify checksum
-    if checksum != ret.calculate_checksum():
+    calculated_checksum = ret.calculate_checksum()
+    if checksum != calculated_checksum:
+        logger.debug(f"Threw away packet due to bad checksum, us: {calculated_checksum}, them: {checksum}")
         return None
     logger.debug("Our TCP checksum " + str(ret.calculate_checksum()) + " Their TCP checksum: " + str(checksum))
     return ret

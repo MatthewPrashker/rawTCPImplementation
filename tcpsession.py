@@ -92,7 +92,7 @@ class TCPSession:
                 )
                 tcp_pkt = construct_TCPobj_from_bytes(ip_pkt.source_ip, ip_pkt.dest_ip, ip_pkt.payload)
                 if not tcp_pkt:
-                    logger.debug("Threw away packet due to bad checksum")
+                    self.send_tcp(TCP_ACK)
                     continue
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)}:{tcp_pkt.source_port} -> {IPv4Address(ip_pkt.dest_ip)}:{tcp_pkt.dest_port}"
@@ -152,8 +152,18 @@ class TCPSession:
     def sort_pkts_received(self):
         self.pkts_received = sorted(self.pkts_received, key=lambda pkt: pkt.seq_num)
 
+      
+
     def build_payload_stream(self):
         self.sort_pkts_received()
+        
+        #for pkt in self.pkts_received:
+        #  print("########################################")
+        #  print(pkt.payload.decode('utf8'))
+        #return b""
+
+
+
         start = self.pkts_received[0].seq_num
         end = self.pkts_received[-1].seq_num + len(self.pkts_received[-1].payload)
         for pkt in self.pkts_received:
@@ -161,7 +171,7 @@ class TCPSession:
             if ending > end:
                 end = ending
         final_len = end - start + 1
-        ret = [b""]*final_len
+        ret = [b"~"]*final_len
         #i = 0
         for pkt in self.pkts_received:
             cur_rel_seq = pkt.seq_num - start

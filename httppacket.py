@@ -1,6 +1,6 @@
 from typing import Dict
 
-HTTP_VERSION = "1.1"
+HTTP_VERSION = "1.0"
 USER_AGENT = "KyleMatthew rawHTTPget/1.0"
 
 
