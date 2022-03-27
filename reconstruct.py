@@ -44,7 +44,7 @@ def construct_IPobj_from_bytes(packet: bytes) -> IPv4:
 # Takes in a packet as a byte string starting at the TCP Header
 # and returns the associated TCP object
 # Returns NULL if the checksum of created packet does not match the original checksum
-def construct_TCPobj_from_bytes(packet: bytes) -> TCP:
+def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
     TCPstructString = "!HHLLHHHH"
     TCPHeader_unpacked = struct.unpack(TCPstructString, packet[:20])
     source_port = TCPHeader_unpacked[0]
@@ -64,9 +64,8 @@ def construct_TCPobj_from_bytes(packet: bytes) -> TCP:
         options = packet[20:4*offset]
         logger.debug("saw packed with big offset " + str(offset) + " with options " + str(options))
     ret = TCP(
-        0, 0, source_port, dest_port, seq_num, ack_num, window_size, flags, payload, offset=offset, options=options
+        src_ip, dst_ip, source_port, dest_port, seq_num, ack_num, window_size, flags, payload, offset=offset, options=options
     )
-    logger.debug(str(ret.calculate_checksum()) + " " + str(checksum))
     #if not check_sum == ret.calculate_checksum():
     #    logger.debug("wrong TCP checksum")
     #else:

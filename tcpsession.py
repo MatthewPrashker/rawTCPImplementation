@@ -91,7 +91,7 @@ class TCPSession:
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)} -> {IPv4Address(ip_pkt.dest_ip)}"
                 )
-                tcp_pkt = construct_TCPobj_from_bytes(ip_pkt.payload)
+                tcp_pkt = construct_TCPobj_from_bytes(ip_pkt.source_ip, ip_pkt.dest_ip, ip_pkt.payload)
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)}:{tcp_pkt.source_port} -> {IPv4Address(ip_pkt.dest_ip)}:{tcp_pkt.dest_port}"
                 )
