@@ -19,7 +19,7 @@ def main():
     session = TCPSession(dst_ip, 80)
     session.do_handshake()
     res = session.do_get_request(parsed_url.netloc, parsed_url.path)
-    print(res.decode("utf-8"))
+    print(res.decode('UTF-8'))
 
 
 if __name__ == "__main__":

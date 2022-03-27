@@ -150,11 +150,25 @@ class TCPSession:
         self.pkts_received = sorted(self.pkts_received, key=lambda pkt: pkt.seq_num)
 
     def build_payload_stream(self):
-        ret = b""
         self.sort_pkts_received()
+        start = self.pkts_received[0].seq_num
+        end = self.pkts_received[-1].seq_num + len(self.pkts_received[-1].payload)
         for pkt in self.pkts_received:
-            ret += pkt.payload
-        return ret
+            ending = pkt.seq_num + len(pkt.payload)
+            if ending > end:
+                end = ending
+        final_len = end - start + 1
+        ret = [b""]*final_len
+        #i = 0
+        for pkt in self.pkts_received:
+            cur_rel_seq = pkt.seq_num - start
+            for i in range(len(pkt.payload)):
+                ret[cur_rel_seq + i] = pkt.payload[i:i+1]
+            #ret += b"\n============================================================================ PKT " + str(i).encode()
+            #ret += b" SEQ " + str(pkt.seq_num).encode() + b"\n"
+            #ret += pkt.payload
+            #i += 1
+        return b"".join(ret)
 
     def do_handshake(self):
         self.send_tcp(TCP_SYN)
