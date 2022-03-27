@@ -66,10 +66,10 @@ class TCP:
         return result
 
     def calculate_checksum(self) -> int:
-        ip_pseudo = self.gen_ip_psuedo_header()
+        ip_psuedo = self.gen_ip_psuedo_header()
         header_with_zero_checksum = self.construct_header_with_checksum_val(0)
         return gen_checksum(
-            ip_pseudo + header_with_zero_checksum + self.options + self.payload
+            ip_psuedo + header_with_zero_checksum + self.payload
         )
 
     def construct_header(self) -> bytes:
@@ -108,20 +108,20 @@ class TCP:
         # Urgent pointer
         result += struct.pack("!H", 0)
         
-        #if self.offset > 5:
-         #   result += struct.pack("!" + (self.offset - 5)*"L", self.options)
+        # Options
+        if self.offset > 5:
+            result += self.options
 
-        # assert len(result) == self.header_length()*4
+        print(len(result))
+        print(self.offset*4)
+        assert len(result) == self.offset*4
         return result
 
     def flag_set(self, flag: int) -> bool:
         return self.flags & flag != 0
 
-    def header_length(self) -> int:
-        return self.offset
-
     def length(self) -> int:
-        return len(self.payload) + self.header_length()
+        return len(self.payload) + (self.offset*4)
 
     def construct_packet(self) -> bytes:
         return self.construct_header() + self.payload

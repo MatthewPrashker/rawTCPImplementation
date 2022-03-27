@@ -22,7 +22,7 @@ def gen_checksum(data: bytes) -> int:
 
     # TODO: figure this out
     # return cs
-    return cs - 15
+    return cs
 
 
 class TestChecksum(unittest.TestCase):

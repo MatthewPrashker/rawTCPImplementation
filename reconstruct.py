@@ -33,7 +33,7 @@ def construct_IPobj_from_bytes(packet: bytes) -> IPv4:
     assert(ret.length == IPHeader_unpacked[2])
 
 
-    if not ret.calculate_checksum() + 15 == checksum:
+    if not ret.calculate_checksum() == checksum:
         logger.debug("Our IP checksum: " + str(ret.calculate_checksum()) + " Their IP checksum: " + str(checksum))
         logger.debug(IPHeader_unpacked[1])
         #Checksum failed
@@ -71,12 +71,15 @@ def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
     #else:
      #   logger.debug("right TCP checksum")
     # # TODO: Verify checksum
-    # check_sum = TCPHeader_unpacked[6]
-    # if check_sum == ret.get_checksum():
-    #     return ret
+    #if check_sum != ret.get_checksum():
+    #    return None
     logger.debug("Our TCP checksum " + str(ret.calculate_checksum()) + " Their TCP checksum: " + str(checksum))
+    #print("them:")
+    #print(packet.hex())
+    #print("us:")
+    #print(ret.construct_packet().hex())
+    #exit(1)
     return ret
-
 
 # Takes in a packet as a byte string starting at the HTTP Header
 # and returns the associated HTTP object
