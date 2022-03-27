@@ -74,7 +74,6 @@ class TCPSession:
         self.send_socket.sendto(ip_pkt.construct_packet(), (self.dest_ip, 1))
         logger.debug("sent TCP packet")
         logger.debug("Length of TCP packet " + str(len(ip_pkt.construct_packet())))
-        logger.debug(ip_pkt.length)
         self.source_seq_num += len(payload)
 
     def recv_tcp(self, first_recv=False) -> TCP:
@@ -92,6 +91,9 @@ class TCPSession:
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)} -> {IPv4Address(ip_pkt.dest_ip)}"
                 )
                 tcp_pkt = construct_TCPobj_from_bytes(ip_pkt.source_ip, ip_pkt.dest_ip, ip_pkt.payload)
+                if not tcp_pkt:
+                    logger.debug("Threw away packet due to bad checksum")
+                    continue
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)}:{tcp_pkt.source_port} -> {IPv4Address(ip_pkt.dest_ip)}:{tcp_pkt.dest_port}"
                 )
@@ -102,6 +104,7 @@ class TCPSession:
                 break
             # Not an IP or TCP packet
             except struct.error as e:
+                logger.warn("struct unpack error: "+str(e))
                 continue
             except Exception as e:
                 continue

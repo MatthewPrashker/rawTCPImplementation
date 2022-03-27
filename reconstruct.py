@@ -71,14 +71,9 @@ def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
     #else:
      #   logger.debug("right TCP checksum")
     # # TODO: Verify checksum
-    #if check_sum != ret.get_checksum():
-    #    return None
+    if checksum != ret.calculate_checksum():
+        return None
     logger.debug("Our TCP checksum " + str(ret.calculate_checksum()) + " Their TCP checksum: " + str(checksum))
-    #print("them:")
-    #print(packet.hex())
-    #print("us:")
-    #print(ret.construct_packet().hex())
-    #exit(1)
     return ret
 
 # Takes in a packet as a byte string starting at the HTTP Header

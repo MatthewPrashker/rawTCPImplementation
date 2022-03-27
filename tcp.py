@@ -112,8 +112,6 @@ class TCP:
         if self.offset > 5:
             result += self.options
 
-        print(len(result))
-        print(self.offset*4)
         assert len(result) == self.offset*4
         return result
 
