@@ -44,7 +44,7 @@ class TCPSession:
         self.setup_sender()
 
         self.pkts_received: List[TCP] = []
-
+        self.starting_seq_num: int = 0
     # Bind the receive socket
     def setup_receiver(self) -> int:
         self.receive_socket.bind((self.source_ip, 0))
@@ -73,7 +73,6 @@ class TCPSession:
         )
         self.send_socket.sendto(ip_pkt.construct_packet(), (self.dest_ip, 1))
         logger.debug("sent TCP packet")
-        logger.debug("Length of TCP packet " + str(len(ip_pkt.construct_packet())))
         self.source_seq_num += len(payload)
 
     def recv_tcp(self, first_recv=False) -> TCP:
@@ -95,13 +94,13 @@ class TCPSession:
                 if tcp_pkt.flag_set(TCP_FIN):
                     logger.debug("got FIN")
                 
-                if not tcp_pkt:
-                    self.send_tcp(TCP_ACK)
-                    continue
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)}:{tcp_pkt.source_port} -> {IPv4Address(ip_pkt.dest_ip)}:{tcp_pkt.dest_port}"
                 )
-                if tcp_pkt.dest_port != self.source_port:
+                if tcp_pkt and tcp_pkt.dest_port != self.source_port:
+                    continue
+                if not tcp_pkt:
+                    self.send_tcp(TCP_ACK)
                     continue
                 if first_recv:
                     self.source_ack_num = tcp_pkt.seq_num + 1
@@ -116,9 +115,12 @@ class TCPSession:
         logger.debug("Got a packet destined for me!")
         logger.debug(str(ip_pkt.length))
         self.handle_recvd_packet(tcp_pkt, first_recv)
+        #self.show_seq_numbers()
         return tcp_pkt
 
     def handle_recvd_packet(self, incoming_pkt: TCP, first_recv: bool):
+        if first_recv:
+            self.starting_seq_num = incoming_pkt.seq_num + 1
         should_ack = first_recv or len(incoming_pkt.payload) != 0
         # Ignore duplicate packets
         for pkt_already_have in self.pkts_received:
@@ -130,15 +132,19 @@ class TCPSession:
         if len(incoming_pkt.payload) > 0:
             self.pkts_received.append(incoming_pkt)
         self.sort_pkts_received()
-        latest_packet_without_break = self.latest_packet_without_break()
+        # latest_packet_without_break = self.latest_packet_without_break()
 
-        if latest_packet_without_break:
-            self.source_ack_num = (
-                latest_packet_without_break.seq_num
-                + len(latest_packet_without_break.payload)
-                + 1
-            )
+        # if latest_packet_without_break:
+        #     self.source_ack_num = (
+        #         latest_packet_without_break.seq_num
+        #         + len(latest_packet_without_break.payload)
+        #         + 1
+        #     )
 
+        if not first_recv:
+            self.source_ack_num = self.max_endpoint()
+
+        logger.debug("Seq num received: " + str(incoming_pkt.seq_num-self.starting_seq_num) + " Seq num expected: " + str(self.source_ack_num-self.starting_seq_num))
         if should_ack:
             self.send_tcp(TCP_ACK)
     
@@ -148,9 +154,13 @@ class TCPSession:
         print(str(pkt.seq_num) + "  " + str(len(pkt.payload)))
 
 
+    # TODO: remove me
     def latest_packet_without_break(self) -> TCP:
         if len(self.pkts_received) == 0:
             return None
+       
+    
+
         last_pkt = self.pkts_received[0]
         for pkt in self.pkts_received[1:]:
             exp_next_seq = last_pkt.seq_num + len(last_pkt.payload)
@@ -161,6 +171,17 @@ class TCPSession:
                 break
 
         return last_pkt
+    
+    def max_endpoint(self) -> int:
+      self.sort_pkts_received()
+      ret = self.starting_seq_num
+      logger.debug([("len:"+str(len(x.payload)), "seq:"+str(x.seq_num - self.starting_seq_num)) for x in self.pkts_received])
+      for pkt in self.pkts_received:
+        curr_endpoint = pkt.seq_num + len(pkt.payload)
+        if(pkt.seq_num > ret):
+          return ret
+        ret = curr_endpoint
+      return ret
 
     def sort_pkts_received(self):
         self.pkts_received = sorted(self.pkts_received, key=lambda pkt: pkt.seq_num)
@@ -193,6 +214,7 @@ class TCPSession:
         self.send_tcp(TCP_SYN)
         self.source_seq_num += 1
         syn_ack = self.recv_tcp(True)
+        logger.debug("First seq num: " + str(self.starting_seq_num))
         # gets acked in recv_tcp
 
     def do_get_request(self, netloc: str, path: str) -> bytes:
