@@ -2,7 +2,7 @@ import sys
 import logging
 
 logger = logging.getLogger("rawhttpget")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 handler = logging.StreamHandler(sys.stderr)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s\t %(message)s")
 handler.setFormatter(formatter)

@@ -197,12 +197,12 @@ class TCPSession:
             if ending > end:
                 end = ending
         final_len = end - start
-        ret = [b"~"]*final_len
+        ret = [b""]*final_len
         #i = 0
         for pkt in self.pkts_received:
             cur_rel_seq = pkt.seq_num - start
             for i in range(len(pkt.payload)):
-                if ret[cur_rel_seq + i] == b"~":
+                if ret[cur_rel_seq + i] == b"":
                     ret[cur_rel_seq + i] = pkt.payload[i:i+1]
             #ret += b"\n============================================================================ PKT " + str(i).encode()
             #ret += b" SEQ " + str(pkt.seq_num).encode() + b"\n"
