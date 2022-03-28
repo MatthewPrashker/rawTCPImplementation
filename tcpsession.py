@@ -221,10 +221,17 @@ class TCPSession:
         # Build get request
         get_request = HTTP(netloc, path).construct_packet()
         self.send_tcp(TCP_ACK + TCP_PSH, get_request)
+        final_endpoint = -1
         while True:
             curr_pkt = self.recv_tcp()
+
             if curr_pkt.flag_set(TCP_FIN):
-                break
+                if final_endpoint == -1:
+                    final_endpoint = curr_pkt.seq_num + len(curr_pkt.payload)
+                    logger.debug(f"FINAL SEQ: {final_endpoint-self.starting_seq_num}")
+                
+            if(self.max_endpoint() == final_endpoint):
+              break
         return self.build_payload_stream()
 
 
