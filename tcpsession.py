@@ -91,6 +91,10 @@ class TCPSession:
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)} -> {IPv4Address(ip_pkt.dest_ip)}"
                 )
                 tcp_pkt = construct_TCPobj_from_bytes(ip_pkt.source_ip, ip_pkt.dest_ip, ip_pkt.payload)
+                
+                if tcp_pkt.flag_set(TCP_FIN):
+                    logger.debug("got FIN")
+                
                 if not tcp_pkt:
                     self.send_tcp(TCP_ACK)
                     continue
@@ -107,6 +111,7 @@ class TCPSession:
                 logger.warn("struct unpack error: "+str(e))
                 continue
             except Exception as e:
+                logger.debug("here")
                 continue
         logger.debug("Got a packet destined for me!")
         logger.debug(str(ip_pkt.length))
@@ -121,10 +126,12 @@ class TCPSession:
                 if should_ack:
                     self.send_tcp(TCP_ACK)
                 return
-        self.sort_pkts_received()
+        
         if len(incoming_pkt.payload) > 0:
             self.pkts_received.append(incoming_pkt)
+        self.sort_pkts_received()
         latest_packet_without_break = self.latest_packet_without_break()
+
         if latest_packet_without_break:
             self.source_ack_num = (
                 latest_packet_without_break.seq_num
@@ -134,6 +141,12 @@ class TCPSession:
 
         if should_ack:
             self.send_tcp(TCP_ACK)
+    
+    def show_seq_numbers(self):
+      self.sort_pkts_received()
+      for pkt in self.pkts_received:
+        print(str(pkt.seq_num) + "  " + str(len(pkt.payload)))
+
 
     def latest_packet_without_break(self) -> TCP:
         if len(self.pkts_received) == 0:
@@ -156,27 +169,20 @@ class TCPSession:
 
     def build_payload_stream(self):
         self.sort_pkts_received()
-        
-        #for pkt in self.pkts_received:
-        #  print("########################################")
-        #  print(pkt.payload.decode('utf8'))
-        #return b""
-
-
-
         start = self.pkts_received[0].seq_num
         end = self.pkts_received[-1].seq_num + len(self.pkts_received[-1].payload)
         for pkt in self.pkts_received:
             ending = pkt.seq_num + len(pkt.payload)
             if ending > end:
                 end = ending
-        final_len = end - start + 1
+        final_len = end - start
         ret = [b"~"]*final_len
         #i = 0
         for pkt in self.pkts_received:
             cur_rel_seq = pkt.seq_num - start
             for i in range(len(pkt.payload)):
-                ret[cur_rel_seq + i] = pkt.payload[i:i+1]
+                if ret[cur_rel_seq + i] == b"~":
+                    ret[cur_rel_seq + i] = pkt.payload[i:i+1]
             #ret += b"\n============================================================================ PKT " + str(i).encode()
             #ret += b" SEQ " + str(pkt.seq_num).encode() + b"\n"
             #ret += pkt.payload

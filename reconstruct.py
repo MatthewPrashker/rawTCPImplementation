@@ -36,8 +36,8 @@ def construct_IPobj_from_bytes(packet: bytes) -> IPv4:
     if not ret.calculate_checksum() == checksum:
         logger.debug("Our IP checksum: " + str(ret.calculate_checksum()) + " Their IP checksum: " + str(checksum))
         logger.debug(IPHeader_unpacked[1])
-        #Checksum failed
-        exit(1)
+        return None
+    
     return ret
 
 
@@ -66,11 +66,6 @@ def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
     ret = TCP(
         src_ip, dst_ip, source_port, dest_port, seq_num, ack_num, window_size, flags, payload, offset=offset, options=options
     )
-    #if not check_sum == ret.calculate_checksum():
-    #    logger.debug("wrong TCP checksum")
-    #else:
-     #   logger.debug("right TCP checksum")
-    # # TODO: Verify checksum
     calculated_checksum = ret.calculate_checksum()
     if checksum != calculated_checksum:
         logger.debug(f"Threw away packet due to bad checksum, us: {calculated_checksum}, them: {checksum}")
