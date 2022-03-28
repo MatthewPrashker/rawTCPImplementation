@@ -15,7 +15,7 @@ class HTTP:
         self.headers["Accept"] = "*/*"
         self.headers["Accept-Encoding"] = "identity"
         self.headers["Host"] = self.netloc
-        self.headers["Connection"] = "Keep-Alive"
+        self.headers["Connection"] = "close"
         self.method = "GET"
 
     def length(self) -> int:
