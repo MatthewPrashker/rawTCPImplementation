@@ -8,6 +8,8 @@ from ip import IPv4
 from httppacket import HTTP
 from typing import List
 
+MAX_SEQ_NUM = (1 << 32)
+
 
 def get_ephemeral_port() -> int:
     # NOTE: this socket is only used to obtain an ephemeral port number
@@ -120,7 +122,7 @@ class TCPSession:
 
     def handle_recvd_packet(self, incoming_pkt: TCP, first_recv: bool):
         if first_recv:
-            self.starting_seq_num = incoming_pkt.seq_num + 1
+            self.starting_seq_num = (incoming_pkt.seq_num + 1)%MAX_SEQ_NUM
         should_ack = first_recv or len(incoming_pkt.payload) != 0
         # Ignore duplicate packets
         for pkt_already_have in self.pkts_received:
@@ -177,7 +179,7 @@ class TCPSession:
       ret = self.starting_seq_num
       logger.debug([("len:"+str(len(x.payload)), "seq:"+str(x.seq_num - self.starting_seq_num)) for x in self.pkts_received])
       for pkt in self.pkts_received:
-        curr_endpoint = pkt.seq_num + len(pkt.payload)
+        curr_endpoint = (pkt.seq_num + len(pkt.payload))%MAX_SEQ_NUM
         if(pkt.seq_num > ret):
           return ret
         ret = curr_endpoint
@@ -200,7 +202,7 @@ class TCPSession:
         ret = [b""]*final_len
         #i = 0
         for pkt in self.pkts_received:
-            cur_rel_seq = pkt.seq_num - start
+            cur_rel_seq = pkt.seq_num - start 
             for i in range(len(pkt.payload)):
                 if ret[cur_rel_seq + i] == b"":
                     ret[cur_rel_seq + i] = pkt.payload[i:i+1]
@@ -212,10 +214,14 @@ class TCPSession:
 
     def do_handshake(self):
         self.send_tcp(TCP_SYN)
-        self.source_seq_num += 1
+        self.source_seq_num = (1 + self.source_seq_num)%MAX_SEQ_NUM
         syn_ack = self.recv_tcp(True)
         logger.debug("First seq num: " + str(self.starting_seq_num))
         # gets acked in recv_tcp
+
+    
+    def do_teardown(self):
+      pass      
 
     def do_get_request(self, netloc: str, path: str) -> bytes:
         # Build get request
@@ -227,11 +233,12 @@ class TCPSession:
 
             if curr_pkt.flag_set(TCP_FIN):
                 if final_endpoint == -1:
-                    final_endpoint = curr_pkt.seq_num + len(curr_pkt.payload)
+                    final_endpoint = (curr_pkt.seq_num + len(curr_pkt.payload))%MAX_SEQ_NUM
                     logger.debug(f"FINAL SEQ: {final_endpoint-self.starting_seq_num}")
                 
             if(self.max_endpoint() == final_endpoint):
               break
+        self.do_teardown()
         return self.build_payload_stream()
 
 
