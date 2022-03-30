@@ -22,7 +22,9 @@ def main():
     splatted = res.split(b"\r\n\r\n")
     headers = splatted[0]
     rest = b"\r\n\r\n".join(splatted[1:])
-    filename = "output"
+    filename = parsed_url.path
+    if filename == "" or filename == "/":
+        filename = "index.html"
     f = open(filename, "wb")
     f.write(rest)
     f.close()
