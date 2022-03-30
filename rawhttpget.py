@@ -19,8 +19,13 @@ def main():
     session = TCPSession(dst_ip, 80)
     session.do_handshake()
     res = session.do_get_request(parsed_url.netloc, parsed_url.path)
-    print(res.decode('UTF-8'))
-
+    splatted = res.split(b"\r\n\r\n")
+    headers = splatted[0]
+    rest = b"\r\n\r\n".join(splatted[1:])
+    filename = "output"
+    f = open(filename, "wb")
+    f.write(rest)
+    f.close()
 
 if __name__ == "__main__":
     main()

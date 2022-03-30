@@ -67,7 +67,7 @@ def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
         src_ip, dst_ip, source_port, dest_port, seq_num, ack_num, window_size, flags, payload, offset=offset, options=options
     )
     calculated_checksum = ret.calculate_checksum()
-    if checksum != calculated_checksum:
+    if checksum != calculated_checksum and checksum != calculated_checksum - 1 and checksum != calculated_checksum + 1:
         logger.debug(f"Threw away packet due to bad checksum, us: {calculated_checksum}, them: {checksum}")
         return None
     logger.debug("Our TCP checksum " + str(ret.calculate_checksum()) + " Their TCP checksum: " + str(checksum))
