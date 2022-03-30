@@ -132,6 +132,11 @@ class TCPSession:
                 return
         
         if len(incoming_pkt.payload) > 0:
+            
+            #Packet looped around to beginning
+            if(incoming_pkt.seq_num + len(incoming_pkt.payload) < self.starting_seq_num):
+                incoming_pky.fake_seq_num += MAX_SEQ_NUM
+            
             self.pkts_received.append(incoming_pkt)
         self.sort_pkts_received()
         # latest_packet_without_break = self.latest_packet_without_break()
@@ -179,37 +184,34 @@ class TCPSession:
       ret = self.starting_seq_num
       logger.debug([("len:"+str(len(x.payload)), "seq:"+str(x.seq_num - self.starting_seq_num)) for x in self.pkts_received])
       for pkt in self.pkts_received:
-        curr_endpoint = (pkt.seq_num + len(pkt.payload))%MAX_SEQ_NUM
+        curr_endpoint = (pkt.fake_seq_num + len(pkt.payload))
         if(pkt.seq_num > ret):
           return ret
         ret = curr_endpoint
       return ret
 
     def sort_pkts_received(self):
-        self.pkts_received = sorted(self.pkts_received, key=lambda pkt: pkt.seq_num)
+        self.pkts_received = sorted(self.pkts_received, key=lambda pkt: pkt.fake_seq_num)
 
       
 
     def build_payload_stream(self):
         self.sort_pkts_received()
         start = self.pkts_received[0].seq_num
-        end = self.pkts_received[-1].seq_num + len(self.pkts_received[-1].payload)
+        end = self.pkts_received[-1].fake_seq_num + len(self.pkts_received[-1].payload)
         for pkt in self.pkts_received:
-            ending = pkt.seq_num + len(pkt.payload)
+            ending = pkt.fake_seq_num + len(pkt.payload)
             if ending > end:
                 end = ending
         final_len = end - start
         ret = [b""]*final_len
         #i = 0
         for pkt in self.pkts_received:
-            cur_rel_seq = pkt.seq_num - start 
+            cur_rel_seq = pkt.fake_seq_num - start 
             for i in range(len(pkt.payload)):
                 if ret[cur_rel_seq + i] == b"":
                     ret[cur_rel_seq + i] = pkt.payload[i:i+1]
-            #ret += b"\n============================================================================ PKT " + str(i).encode()
-            #ret += b" SEQ " + str(pkt.seq_num).encode() + b"\n"
-            #ret += pkt.payload
-            #i += 1
+            
         return b"".join(ret)
 
     def do_handshake(self):
