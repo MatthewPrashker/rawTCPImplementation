@@ -38,6 +38,7 @@ class TCP:
         self.dest_ip = dest_ip
         self.dest_port = dest_port
         self.seq_num = seq_num
+        self.fake_seq_num = seq_num
         self.ack_num = ack_num
         self.window_size = window_size
         self.flags = flags

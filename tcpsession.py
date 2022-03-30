@@ -135,7 +135,7 @@ class TCPSession:
             
             #Packet looped around to beginning
             if(incoming_pkt.seq_num + len(incoming_pkt.payload) < self.starting_seq_num):
-                incoming_pky.fake_seq_num += MAX_SEQ_NUM
+                incoming_pkt.fake_seq_num += MAX_SEQ_NUM
             
             self.pkts_received.append(incoming_pkt)
         self.sort_pkts_received()
