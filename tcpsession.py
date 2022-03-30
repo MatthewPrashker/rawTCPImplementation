@@ -95,7 +95,7 @@ class TCPSession:
                 
                 if tcp_pkt.flag_set(TCP_FIN):
                     logger.debug("got FIN")
-                
+
                 logger.debug(
                     f"Saw packet {IPv4Address(ip_pkt.source_ip)}:{tcp_pkt.source_port} -> {IPv4Address(ip_pkt.dest_ip)}:{tcp_pkt.dest_port}"
                 )

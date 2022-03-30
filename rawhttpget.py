@@ -4,6 +4,7 @@ import sys
 from logger import logger
 from socket import gethostbyname
 import urllib.parse
+import os.path
 
 from tcpsession import TCPSession
 
@@ -25,6 +26,7 @@ def main():
     filename = parsed_url.path
     if filename == "" or filename == "/":
         filename = "index.html"
+    filename = os.path.basename(filename)
     f = open(filename, "wb")
     f.write(rest)
     f.close()
