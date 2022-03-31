@@ -134,19 +134,11 @@ class TCPSession:
         if len(incoming_pkt.payload) > 0:
             
             #Packet looped around to beginning
-            if(incoming_pkt.seq_num + len(incoming_pkt.payload) < self.starting_seq_num):
+            if((incoming_pkt.seq_num + len(incoming_pkt.payload))%MAX_SEQ_NUM < self.starting_seq_num):
                 incoming_pkt.fake_seq_num += MAX_SEQ_NUM
             
             self.pkts_received.append(incoming_pkt)
         self.sort_pkts_received()
-        # latest_packet_without_break = self.latest_packet_without_break()
-
-        # if latest_packet_without_break:
-        #     self.source_ack_num = (
-        #         latest_packet_without_break.seq_num
-        #         + len(latest_packet_without_break.payload)
-        #         + 1
-        #     )
 
         if not first_recv:
             self.source_ack_num = self.max_endpoint()
@@ -165,12 +157,10 @@ class TCPSession:
     def latest_packet_without_break(self) -> TCP:
         if len(self.pkts_received) == 0:
             return None
-       
     
-
         last_pkt = self.pkts_received[0]
         for pkt in self.pkts_received[1:]:
-            exp_next_seq = last_pkt.seq_num + len(last_pkt.payload)
+            exp_next_seq = last_pkt.fake_seq_num + len(last_pkt.payload)
             if pkt.seq_num == exp_next_seq:
                 last_pkt = pkt
                 continue
