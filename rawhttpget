@@ -30,6 +30,7 @@ def main():
     f = open(filename, "wb")
     f.write(rest)
     f.close()
+    logger.info(f"Wrote output to [{filename}]")
 
 if __name__ == "__main__":
     main()
