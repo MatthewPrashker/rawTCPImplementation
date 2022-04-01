@@ -8,8 +8,6 @@ def gen_checksum(data: bytes) -> int:
     index = 0
 
     if len(data) % 2 == 1:
-        logger.debug("ODD!?")
-        
         pkt += b"\0"
 
     while index + 1 < len(pkt):
@@ -20,8 +18,6 @@ def gen_checksum(data: bytes) -> int:
     cs = (cs & 0xFFFF) + (cs >> 16)
     cs = (~cs) & 0xFFFF
 
-    # TODO: figure this out
-    # return cs
     return cs
 
 

@@ -72,8 +72,3 @@ def construct_TCPobj_from_bytes(src_ip, dst_ip, packet: bytes) -> TCP:
         return None
     logger.debug("Our TCP checksum " + str(ret.calculate_checksum()) + " Their TCP checksum: " + str(checksum))
     return ret
-
-# Takes in a packet as a byte string starting at the HTTP Header
-# and returns the associated HTTP object
-def constructHTTPobj_from_bytes(packet: bytes) -> HTTP:
-    return HTTP("wherever.com", 80, "/some/path")
