@@ -7,6 +7,7 @@ from tcp import TCP, TCP_SYN, TCP_ACK, TCP_PSH, TCP_FIN
 from ip import IPv4
 from httppacket import HTTP
 from typing import List
+from collections import defaultdict
 
 MAX_SEQ_NUM = (1 << 32)
 
@@ -48,9 +49,14 @@ class TCPSession:
         self.pkts_received: List[TCP] = []
         self.starting_seq_num: int = 0
         
-        self.in_slow_start = True
+        #Congestion control fields
+        self.slow_start = True
         self.unacked_bytes = 0
-        self.cwnd = 4000
+        self.curr_cwnd = 1
+        self.max_cwnd = 4000
+
+        self.ack_map = defaultdict(int)
+
     # Bind the receive socket
     def setup_receiver(self) -> int:
         self.receive_socket.bind((self.source_ip, 0))
@@ -78,10 +84,16 @@ class TCPSession:
             tcp_pkt.construct_packet(),
         )
             
-
+        if self.slow_start:
+            self.curr_cwnd = min(2*self.curr_cwnd, self.max_cwnd)
+        else:
+            # Our version of additive increase
+            self.curr_cwnd = min(self.curr_cwnd+5, self.max_cwnd)
+        
         self.send_socket.sendto(ip_pkt.construct_packet(), (self.dest_ip, 1))
         logger.debug("sent TCP packet")
         self.source_seq_num += len(payload)
+        self.unacked_bytes += len(payload)
 
     def recv_tcp(self, first_recv=False) -> TCP:
         # TODO: potentially timeout for a retry
@@ -123,12 +135,21 @@ class TCPSession:
         logger.debug("Got a packet destined for me!")
         logger.debug(str(ip_pkt.length))
         self.handle_recvd_packet(tcp_pkt, first_recv)
-        #self.show_seq_numbers()
+    
         return tcp_pkt
 
     def handle_recvd_packet(self, incoming_pkt: TCP, first_recv: bool):
         if first_recv:
             self.starting_seq_num = (incoming_pkt.seq_num + 1)%MAX_SEQ_NUM
+        
+        self.ack_map[incoming_pkt.seq_num] += 1
+        if self.ack_map[incoming_pkt.seq_num] >= 3:
+           self.slow_start = True
+           self.curr_cwnd = 1
+        elif self.ack_map[incoming_pkt.seq_num] < 3:
+           self.slow_start = False
+
+
         should_ack = first_recv or len(incoming_pkt.payload) != 0
         # Ignore duplicate packets
         for pkt_already_have in self.pkts_received:
@@ -145,9 +166,12 @@ class TCPSession:
             
             self.pkts_received.append(incoming_pkt)
         self.sort_pkts_received()
+        
+        self.unacked_bytes -= self.max_endpoint() - self.source_ack_num
 
         if not first_recv:
             self.source_ack_num = self.max_endpoint()
+
 
         logger.debug("Seq num received: " + str(incoming_pkt.seq_num-self.starting_seq_num) + " Seq num expected: " + str(self.source_ack_num-self.starting_seq_num))
         if should_ack:
