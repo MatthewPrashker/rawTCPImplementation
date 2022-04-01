@@ -1,0 +1,27 @@
+# High-Level Approach
+
+  We have classes for the packets of each layer in the stack, and a TCPSession class. 
+  In the TCPSession, we have methods to perform each portion of the TCP connection lifecycle. 
+  Namely, a handshake method, sending and receiving data after the handshake, and tearing down the connection.
+  
+  The essential piece of functionality is the sending and receiving of the data. We maintain sequence numbers from the 
+  sender, to keep track of which pieces of data we have, and send appropriate ACKS after receiving the data. We maintain the
+  data received as a list, filling in bytes in the appropriate position of the list as we receive them, and reconstruct
+  the received data at the end. 
+
+
+# TCP/IP Features Implemented
+  Checksums of IP and TCP packets are calculated correctly.                                                                                                                                                       
+  TCP checksums utilize the TCP + IP pseudo-header as described in RFC793, and Wireshark verifies our checksums as correct.                                                                                       
+  We handle incoming TCP options (referring to the extra data at the end of the TCP header before the payload, _not_ flags, which are set properly) correctly, but our code does not set any for outgoing packets.
+
+# Challenges Faced
+  Parsing the incoming packets from bytes on the wire to our data structures was difficult.
+  Realizing we needed rx-checksumming and tx-checksumming and generic-receive-offload turned off on our virtual NIC was a huge problem as well. These things could be added to the project writeup to make this a bit easier for students doing this project in future semesters. We spent a lot of time debugging checksums that were already correct :)
+
+# Who did what?
+  Matthew: reconstruct methods for parsing bytes into our python classes, reordering of out-of-order packets
+  
+  Kyle: set up the dev VM, python class structure, debugging with tcpdump and Wireshark, figured out `ethtool` commands for fixing the checksum problem for the class
+  
+  We pair programmed much of the code after initial setup, meeting on Zoom and working together to implement functionality.
