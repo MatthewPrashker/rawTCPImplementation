@@ -9,6 +9,17 @@
   data received as a list, filling in bytes in the appropriate position of the list as we receive them, and reconstruct
   the received data at the end. 
 
+  rawhttpget.py: main method, parses cli args and instantiates tcp session
+  logger.py: sets up a python logger for debugging purposes
+
+  ip.py: Class describing a IP Packet
+  tcp.py: Class describing a TCP Packet
+  httppacket.py: Class describing a HTTP Packet
+  reconstruct.py: Contains methods to construct appropriate class objects from raw data from incoming packets
+
+  tcpsession.py: contains the main logic of the program performing the entire TCP connection as described above,
+  and maintains the state of the connection throughout. 
+  checksum.py: contains methods for checksum computations  
 
 # TCP/IP Features Implemented
   Checksums of IP and TCP packets are calculated correctly.                                                                                                                                                       
