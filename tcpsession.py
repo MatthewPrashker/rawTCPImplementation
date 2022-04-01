@@ -47,6 +47,10 @@ class TCPSession:
 
         self.pkts_received: List[TCP] = []
         self.starting_seq_num: int = 0
+        
+        self.in_slow_start = True
+        self.unacked_bytes = 0
+        self.cwnd = 4000
     # Bind the receive socket
     def setup_receiver(self) -> int:
         self.receive_socket.bind((self.source_ip, 0))
@@ -73,6 +77,8 @@ class TCPSession:
             IPv4Address(self.dest_ip),
             tcp_pkt.construct_packet(),
         )
+            
+
         self.send_socket.sendto(ip_pkt.construct_packet(), (self.dest_ip, 1))
         logger.debug("sent TCP packet")
         self.source_seq_num += len(payload)
@@ -213,7 +219,9 @@ class TCPSession:
 
     
     def do_teardown(self):
-      pass      
+      self.send_tcp(TCP_FIN + TCP_ACK)
+      self.send_socket.close()
+      self.receive_socket.close()
 
     def do_get_request(self, netloc: str, path: str) -> bytes:
         # Build get request
