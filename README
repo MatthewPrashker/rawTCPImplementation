@@ -1,3 +1,5 @@
+Implementation of the TCP Protocol on top of raw sockets.
+
 # High-Level Approach
 
   We have classes for the packets of each layer in the stack, and a TCPSession class. 
